@@ -8,7 +8,7 @@
 *
 *
 *******************************************************************************
-* Copyright 2021-2022, Cypress Semiconductor Corporation (an Infineon company) or
+* Copyright 2021-2023, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
 *
 * This software, including source code, documentation and related
@@ -45,7 +45,6 @@
  ******************************************************************************/
 #include "I2CMasterSlave.h"
 #include "stdio.h"
-#include "uart.h"
 
 /*******************************************************************************
 * Macros
@@ -60,11 +59,11 @@
 *******************************************************************************/
 /* Buffer to hold the data received fram master */
 uint8_t i2cWriteBuffer[COMMAND_PACKET_SIZE] = {COMMAND_HEADER, COMMAND_BSP,
-                                                I2C_COMMAND_LED_OFF, COMMAND_FOOTER};
+                                               I2C_COMMAND_LED_OFF, COMMAND_FOOTER};
 
 /* Buffer to hold the data that is to be read by the master */
 uint8_t i2cReadBuffer[COMMAND_PACKET_SIZE]  = {COMMAND_HEADER, COMMAND_BSP,
-                                                I2C_COMMAND_LED_OFF, COMMAND_FOOTER};
+                                               I2C_COMMAND_LED_OFF, COMMAND_FOOTER};
 
 /* Structure for master transfer configuration */
 cy_stc_scb_i2c_master_xfer_config_t masterTransferCfg =
@@ -110,8 +109,8 @@ uint32_t InitI2CMasterSlave()
     cy_en_sysint_status_t sysStatus;
     cy_stc_sysint_t CYBSP_I2C_SCB_IRQ_cfg =
     {
-            /*.intrSrc =*/ CYBSP_I2C_IRQ,
-            /*.intrPriority =*/ 3u
+        /*.intrSrc =*/ CYBSP_I2C_IRQ,
+        /*.intrPriority =*/ 3u
     };
 
     /*Set the Slave adress*/
@@ -134,18 +133,18 @@ uint32_t InitI2CMasterSlave()
 
     /* Register callback for event notification.*/
     Cy_SCB_I2C_RegisterEventCallback(CYBSP_I2C_HW, I2C_SlaveEventHandler,
-                                        &CYBSP_I2C_context);
+                                     &CYBSP_I2C_context);
 
     /*Enable the I2C in master-slave mode*/
     Cy_SCB_I2C_Enable(CYBSP_I2C_HW, &CYBSP_I2C_context);
 
     /* Configure the i2c read buffer*/
     Cy_SCB_I2C_SlaveConfigReadBuf(CYBSP_I2C_HW, i2cReadBuffer,
-                                    COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
+                                  COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
 
     /* Configure the i2c write buffer*/
     Cy_SCB_I2C_SlaveConfigWriteBuf(CYBSP_I2C_HW, i2cWriteBuffer,
-                                    COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
+                                   COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
 
     return I2C_SUCCESS;
 }
@@ -162,30 +161,6 @@ void CYBSP_I2C_Interrupt(void)
 {
     Cy_SCB_I2C_Interrupt(CYBSP_I2C_HW, &CYBSP_I2C_context);
 }
-
-
-/*******************************************************************************
-* Function Name: handle_error
-********************************************************************************
-* Summary:
-*  Function to handle errors
-*
-* Parameters:
-*  none
-*
-* Return:
-*  none
-*
-*******************************************************************************/
-void handle_error(void)
-{
-    /* Disable all interrupts. */
-    __disable_irq();
-
-    /* Infinite loop. */
-    while(1u) {}
-}
-
 
 /*******************************************************************************
 * Function Name: pmg1I2CDeviceCheck
@@ -241,7 +216,6 @@ void pmg1I2CDeviceCheck(uint8_t device,char* bspString)
 void processI2CCommandFromMaster()
 {
     char bspString[12];
-    char str[70];
 
     /* Check if command was received from Master */
     if(commandFromMasterReceived)
@@ -251,7 +225,6 @@ void processI2CCommandFromMaster()
         /* Verify if the received command packet is valid*/
         if(checkCommandPacketValidity(i2cWriteBuffer) == I2C_PACKET_INVALID)
         {
-            uartSendString(" Invalid command packet received from master.\r\n\n");
             return;
         }
 
@@ -262,16 +235,10 @@ void processI2CCommandFromMaster()
         switch(i2cWriteBuffer[COMMAND_LED_INDEX])
         {
             case I2C_COMMAND_LED_ON:
-                sprintf(str," LED ON command received from master (%s) \r\n\n", bspString);
-                uartSendString(str);
-                /* Turn LED on*/
                 Cy_GPIO_Write(CYBSP_USER_LED_PORT, CYBSP_USER_LED_PIN, LED_ON);
             break;
 
             case I2C_COMMAND_LED_OFF:
-                sprintf(str," LED OFF command received from master (%s) \r\n\n", bspString);
-                uartSendString(str);
-                /* Turn LED off*/
                 Cy_GPIO_Write(CYBSP_USER_LED_PORT, CYBSP_USER_LED_PIN, LED_OFF);
             break;
 
@@ -283,7 +250,6 @@ void processI2CCommandFromMaster()
         i2cReadBuffer[COMMAND_LED_INDEX] = i2cWriteBuffer[COMMAND_LED_INDEX];
     }
 }
-
 
 /*******************************************************************************
 * Function Name: processI2CCommandToSlave
@@ -304,25 +270,24 @@ void processI2CCommandFromMaster()
 void processI2CCommandToSlave()
 {
     uint32_t status;
-    char str[70], bspString[12];
+    char bspString[12];
+
     static uint8_t slaveReadBuffer[COMMAND_PACKET_SIZE];
     static uint8_t slaveWriteBuffer[COMMAND_PACKET_SIZE];
 
     /* Send read command to external slave */
     status = ReadFromI2CSlave(EXTERNAL_SLAVE_ADDRESS,
-                            slaveReadBuffer,COMMAND_PACKET_SIZE);
+            slaveReadBuffer,COMMAND_PACKET_SIZE);
                             
     if(status != TRANSFER_CMPLT)
     {
-        uartSendString( "\r\n I2C Read Error \r\n\n");
+        /* I2C Read Error */
     }
     else
     {
         /* Verify if the status packet read from external slave is valid*/
         if(checkCommandPacketValidity(slaveReadBuffer) == I2C_PACKET_INVALID)
         {
-            uartSendString(
-                        "\r\n Invalid command packet read from slave.\r\n\n");
             return;
         }
         
@@ -333,15 +298,11 @@ void processI2CCommandToSlave()
         switch(slaveReadBuffer[COMMAND_LED_INDEX])
         {
             case I2C_COMMAND_LED_ON:
-                sprintf(str," Sending command to turn OFF slave (%s) LED \r\n\n",bspString);
-                uartSendString(str);
                 /* If slave LED is on, then set command to turn it off */
                 slaveWriteBuffer[COMMAND_LED_INDEX] = I2C_COMMAND_LED_OFF;
             break;
 
             case I2C_COMMAND_LED_OFF:
-                sprintf(str," Sending command to turn ON slave (%s) LED \r\n\n", bspString);
-                uartSendString(str);
                 /* If slave LED is off, then set command to turn it on */
                 slaveWriteBuffer[COMMAND_LED_INDEX] = I2C_COMMAND_LED_ON;
             break;
@@ -360,7 +321,6 @@ void processI2CCommandToSlave()
         WriteToI2CSlave(EXTERNAL_SLAVE_ADDRESS,slaveWriteBuffer,COMMAND_PACKET_SIZE);
     }
 }
-
 
 /*******************************************************************************
 * Function Name: I2C_SlaveEventHandler
@@ -388,7 +348,7 @@ void I2C_SlaveEventHandler(uint32_t events)
         
         /* Setup read buffer for the next read transaction */
         Cy_SCB_I2C_SlaveConfigReadBuf(CYBSP_I2C_HW, i2cReadBuffer,
-                                        COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
+                                      COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
     }
 
     /* Slave received data from master */
@@ -404,7 +364,7 @@ void I2C_SlaveEventHandler(uint32_t events)
 
         /* Setup buffer for the next write transaction */
         Cy_SCB_I2C_SlaveConfigWriteBuf(CYBSP_I2C_HW, i2cWriteBuffer,
-                                        COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
+                                       COMMAND_PACKET_SIZE, &CYBSP_I2C_context);
     }
     /* Ignore all other events */
 }
@@ -429,8 +389,8 @@ uint8_t checkCommandPacketValidity(uint8_t* commandPacket)
     uint8_t status = I2C_PACKET_INVALID;
 
     /* Verify the packet header and footer */
-    if( (commandPacket[COMMAND_HEADER_INDEX] == COMMAND_HEADER)  &&
-            (commandPacket[COMMAND_FOOTER_INDEX] == COMMAND_FOOTER) )
+    if((commandPacket[COMMAND_HEADER_INDEX] == COMMAND_HEADER) &&
+       (commandPacket[COMMAND_FOOTER_INDEX] == COMMAND_FOOTER))
     {
         status = I2C_PACKET_VALID;
     }
@@ -463,8 +423,8 @@ uint8_t ReadFromI2CSlave(uint8_t slaveAddress,uint8_t* readBuffer, uint8_t readS
     cy_en_scb_i2c_status_t errorStatus;
     uint32_t masterStatus;
 
-    /* Timeout 1 sec (one unit is us) */
-    uint32_t timeout = 1000000UL;
+    /* Timeout 1 sec (one unit is milliseconds) */
+    uint32_t timeout = 1000UL;
 
     /* Setup transfer specific parameters */
     masterTransferCfg.slaveAddress  = slaveAddress;
@@ -476,14 +436,14 @@ uint8_t ReadFromI2CSlave(uint8_t slaveAddress,uint8_t* readBuffer, uint8_t readS
 
     /* Initiate read transaction */
     errorStatus = Cy_SCB_I2C_MasterRead(CYBSP_I2C_HW, &masterTransferCfg,
-                                            &CYBSP_I2C_context);
+                                        &CYBSP_I2C_context);
     if(errorStatus == CY_SCB_I2C_SUCCESS)
     {
         /* Wait until master complete read transfer or time out has occurred */
         do
         {
             masterStatus = Cy_SCB_I2C_MasterGetStatus(CYBSP_I2C_HW, &CYBSP_I2C_context);
-            Cy_SysLib_DelayUs(CY_SCB_WAIT_1_UNIT);
+            Cy_SysLib_Delay(CY_SCB_WAIT_1_UNIT);
             timeout--;
 
         } while ((0UL != (masterStatus & CY_SCB_I2C_MASTER_BUSY)) && (timeout > 0));
@@ -502,12 +462,9 @@ uint8_t ReadFromI2CSlave(uint8_t slaveAddress,uint8_t* readBuffer, uint8_t readS
                 status = TRANSFER_CMPLT;
             }
         }
-
     }
-
     return (status);
 }
-
 
 /*******************************************************************************
 * Function Name: WriteToI2CSlave
@@ -532,8 +489,8 @@ uint8_t WriteToI2CSlave(uint8_t slaveAddress,uint8_t* writeBuffer, uint8_t write
     cy_en_scb_i2c_status_t errorStatus;
     uint32_t masterStatus;
 
-    /* Timeout 1 sec (one unit is us) */
-    uint32_t timeout = 1000000UL;
+    /* Timeout 1 sec (one unit is milliseconds) */
+    uint32_t timeout = 1000UL;
 
     /* Configure write transaction */
     masterTransferCfg.slaveAddress  = slaveAddress;
@@ -543,17 +500,16 @@ uint8_t WriteToI2CSlave(uint8_t slaveAddress,uint8_t* writeBuffer, uint8_t write
     /* Generate Stop condition at the end of transaction */
     masterTransferCfg.xferPending   = false;
 
-
     /* Initiate write transaction */
     errorStatus = Cy_SCB_I2C_MasterWrite(CYBSP_I2C_HW, &masterTransferCfg,
-                                            &CYBSP_I2C_context);
+                                        &CYBSP_I2C_context);
     if(errorStatus == CY_SCB_I2C_SUCCESS)
     {
         /* Wait until master complete read transfer or time out has occured */
         do
         {
             masterStatus  = Cy_SCB_I2C_MasterGetStatus(CYBSP_I2C_HW, &CYBSP_I2C_context);
-            Cy_SysLib_DelayUs(CY_SCB_WAIT_1_UNIT);
+            Cy_SysLib_Delay(CY_SCB_WAIT_1_UNIT);
             timeout--;
 
         } while ((0UL != (masterStatus & CY_SCB_I2C_MASTER_BUSY)) && (timeout > 0));
@@ -566,18 +522,14 @@ uint8_t WriteToI2CSlave(uint8_t slaveAddress,uint8_t* writeBuffer, uint8_t write
         }
         else
         {
-            if (
-                (0u == (MASTER_ERROR_MASK & masterStatus)) &&
+            if ((0u == (MASTER_ERROR_MASK & masterStatus)) &&
                 ((writeSize+2) == Cy_SCB_I2C_MasterGetTransferCount(CYBSP_I2C_HW,
-                                                            &CYBSP_I2C_context))
-                )
+                                                            &CYBSP_I2C_context)))
             {
                 status = TRANSFER_CMPLT;
             }
         }
     }
-
+    
     return (status);
 }
-
-

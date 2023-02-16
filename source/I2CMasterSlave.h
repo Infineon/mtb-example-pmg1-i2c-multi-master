@@ -8,7 +8,7 @@
 *
 *
 *******************************************************************************
-* Copyright 2021-2022, Cypress Semiconductor Corporation (an Infineon company) or
+* Copyright 2021-2023, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
 *
 * This software, including source code, documentation and related
@@ -58,11 +58,11 @@
 
 /* Uncomment PMG1_KIT_1_ADDRESS_ENABLE and comment PMG1_KIT_2_ADDRESS_ENABLE 
  * when programming the first kit*/
-#define PMG1_KIT_1_ADDRESS_ENABLE
+//#define PMG1_KIT_1_ADDRESS_ENABLE
 
 /* Uncomment PMG1_KIT_2_ADDRESS_ENABLE and comment PMG1_KIT_1_ADDRESS_ENABLE 
  * when programming the second kit*/
-//  #define PMG1_KIT_2_ADDRESS_ENABLE
+#define PMG1_KIT_2_ADDRESS_ENABLE
 
 #define LED_ON                      (0UL)
 #define LED_OFF                     (1UL)
@@ -118,7 +118,6 @@
 * Function Prototypes
 *******************************************************************************/
 uint32_t InitI2CMasterSlave(void);
-void handle_error(void);
 uint8_t ReadFromI2CSlave(uint8_t slaveAddress,uint8_t* readBuffer, uint8_t readSize);
 uint8_t WriteToI2CSlave(uint8_t slaveAddress,uint8_t* writeBuffer, uint8_t writeSize);
 uint8_t checkCommandPacketValidity(uint8_t*);
